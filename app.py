@@ -420,173 +420,216 @@ TV_GRP                       - TV Gross Rating Points
     """)
 
 # TAB 1: Data Upload
+
+
+# TAB 1: Data Upload - BOTH MODES SUPPORT ALL 8 VARIABLE TYPES  
 elif tab_selection == " Data Upload":
     st.markdown('<p class="sub-header">Upload Your Marketing Data</p>', unsafe_allow_html=True)
     
     st.markdown("""
     <div class="info-box">
-    <b>INFO Upload Options:</b>
+    <b>Upload Options:</b>
     <ul>
-    <li><b>Option A:</b> Upload individual files for KPI and each media channel (simpler)</li>
-    <li><b>Option B:</b> Upload one combined dataset with all variables (faster for v7 features)</li>
+    <li><b>Option A:</b> Individual Files - All 8 variable types supported</li>
+    <li><b>Option B:</b> Combined Dataset - All 8 variable types supported</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)
     
-    upload_mode = st.radio("Select upload mode:", ["Individual Files (Original)", "Combined Dataset (v7)"], horizontal=True)
+    upload_mode = st.radio("Select mode:", ["Individual Files", "Combined Dataset"], horizontal=True)
     
-    if upload_mode == "Individual Files (Original)":
-        # ORIGINAL UPLOAD MODE
-        col1, col2 = st.columns(2)
+    if upload_mode == "Individual Files":
+        st.markdown("### Step 1: KPI (MANDATORY)")
+        kpi_file = st.file_uploader("KPI CSV/Excel", type=['csv', 'xlsx'], key='kpi_v7')
+        if kpi_file:
+            try:
+                kpi_df = pd.read_csv(kpi_file) if kpi_file.name.endswith('.csv') else pd.read_excel(kpi_file)
+                kpi_df = clean_dataframe_numeric_columns(kpi_df, exclude_cols=[kpi_df.columns[0]])
+                st.session_state.kpi_data = kpi_df
+                st.success(f"[OK] KPI ({len(kpi_df)} rows)")
+            except Exception as e:
+                st.error(str(e))
         
-        with col1:
-            st.markdown("####  KPI Data (Revenue)")
-            st.info("Upload your store/Shopify revenue data. Must include: **Date** and **Revenue** columns")
-            
-            kpi_file = st.file_uploader(
-                "Choose KPI CSV file",
-                type=['csv'],
-                key='kpi_upload',
-                help="Upload CSV with Date and Revenue columns"
-            )
-            
-            if kpi_file:
-                try:
-                    kpi_df = pd.read_csv(kpi_file)
-                    kpi_df = clean_dataframe_numeric_columns(kpi_df, exclude_cols=[kpi_df.columns[0]])
-                    st.session_state.kpi_data = kpi_df
-                    
-                    st.success(f"OK KPI data uploaded successfully! ({len(kpi_df)} rows)")
-                    
-                    with st.expander("Preview KPI Data"):
-                        st.dataframe(kpi_df.head(10), use_container_width=True)
-                        st.markdown("**Data Info:**")
-                        st.write(f"- Columns: {', '.join(kpi_df.columns.tolist())}")
-                        st.write(f"- Date range: {kpi_df.iloc[:, 0].min()} to {kpi_df.iloc[:, 0].max()}")
-                        
-                except Exception as e:
-                    st.error(f"Error loading KPI data: {str(e)}")
-        
-        with col2:
-            st.markdown("####  Media Spend Data")
-            st.info("Upload media channel data. Must include: **Date** and **Cost** columns")
-            
-            num_channels = st.number_input("Number of media channels", min_value=1, max_value=10, value=2, key='num_channels')
-            
-            for i in range(num_channels):
-                st.markdown(f"**Channel {i+1}:**")
-                channel_name = st.text_input(f"Channel name", value=f"Channel_{i+1}", key=f'channel_name_{i}')
-                channel_file = st.file_uploader(
-                    f"Upload {channel_name} CSV",
-                    type=['csv'],
-                    key=f'channel_file_{i}'
-                )
-                
-                if channel_file:
-                    try:
-                        channel_df = pd.read_csv(channel_file)
-                        channel_df = clean_dataframe_numeric_columns(channel_df, exclude_cols=[channel_df.columns[0]])
-                        st.session_state.media_data[channel_name] = channel_df
-                        st.success(f"OK {channel_name} uploaded ({len(channel_df)} rows)")
-                        
-                        with st.expander(f"Preview {channel_name}"):
-                            st.dataframe(channel_df.head(5), use_container_width=True)
-                            
-                    except Exception as e:
-                        st.error(f"Error loading {channel_name}: {str(e)}")
-        
-        # Promotion/Discount variable upload
         st.markdown("---")
-        st.markdown("####  Promotion/Discount Data (Optional)")
-        st.info("""
-        Upload promotion data with **Date** and **Promotion** columns.
-        - **String values** (e.g., 'Yes'/'No', 'Sale'/'Normal') -> Converted to dummy variables
-        - **Numeric values** (e.g., 10%, 0.15) -> Used as continuous variable
-        """)
+        st.markdown("### Step 2: Media Channels (MANDATORY)")
+        num_media = st.number_input("Number of channels", 1, 15, 3, key='num_media_v7')
+        if 'media_data_v7' not in st.session_state:
+            st.session_state.media_data_v7 = {}
         
-        promo_file = st.file_uploader(
-            "Upload Promotion CSV (optional)",
-            type=['csv'],
-            key='promo_upload',
-            help="CSV with Date and Promotion columns"
-        )
+        for i in range(num_media):
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                ch_name = st.text_input("Name", f"Channel_{i+1}", key=f'ch_name_{i}')
+            with col2:
+                ch_file = st.file_uploader(f"{ch_name}", type=['csv', 'xlsx'], key=f'ch_file_{i}')
+            if ch_file:
+                try:
+                    ch_df = pd.read_csv(ch_file) if ch_file.name.endswith('.csv') else pd.read_excel(ch_file)
+                    ch_df = clean_dataframe_numeric_columns(ch_df, exclude_cols=[ch_df.columns[0]])
+                    st.session_state.media_data_v7[ch_name] = ch_df
+                    st.success(f"[OK] {ch_name}")
+                except Exception as e:
+                    st.error(str(e))
         
+        if st.session_state.media_data_v7:
+            st.markdown("---")
+            st.markdown("### Step 3: Classify Channels")
+            st.info("TV: adstock 0.3-0.8 | Traditional: 0.1-0.4 | Digital: 0.0-0.3")
+            media_names = list(st.session_state.media_data_v7.keys())
+            col1, col2 = st.columns(2)
+            with col1:
+                tv_channels = st.multiselect("TV/Video", media_names)
+            with col2:
+                traditional_channels = st.multiselect("Traditional", [c for c in media_names if c not in tv_channels])
+            digital_channels = [c for c in media_names if c not in tv_channels + traditional_channels]
+        
+        st.markdown("---")
+        st.markdown("### Step 4: Competition (Optional)")
+        num_comp = st.number_input("Number of competition vars", 0, 10, 0, key='num_comp_v7')
+        if 'competition_data_v7' not in st.session_state:
+            st.session_state.competition_data_v7 = {}
+        if num_comp > 0:
+            for i in range(num_comp):
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    comp_name = st.text_input("Name", f"Competitor_{i+1}", key=f'comp_name_{i}')
+                with col2:
+                    comp_file = st.file_uploader(f"{comp_name}", type=['csv', 'xlsx'], key=f'comp_file_{i}')
+                if comp_file:
+                    try:
+                        comp_df = pd.read_csv(comp_file) if comp_file.name.endswith('.csv') else pd.read_excel(comp_file)
+                        comp_df = clean_dataframe_numeric_columns(comp_df, exclude_cols=[comp_df.columns[0]])
+                        st.session_state.competition_data_v7[comp_name] = comp_df
+                        st.success(f"[OK] {comp_name}")
+                    except Exception as e:
+                        st.error(str(e))
+            if st.session_state.competition_data_v7:
+                atl_comps = st.multiselect("ATL Competition", list(st.session_state.competition_data_v7.keys()))
+        
+        st.markdown("---")
+        st.markdown("### Step 5: Controls (Optional)")
+        st.info("NOT transformed")
+        num_ctrl = st.number_input("Number of control vars", 0, 10, 0, key='num_ctrl_v7')
+        if 'control_data_v7' not in st.session_state:
+            st.session_state.control_data_v7 = {}
+        if num_ctrl > 0:
+            for i in range(num_ctrl):
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    ctrl_name = st.text_input("Name", f"Control_{i+1}", key=f'ctrl_name_{i}')
+                with col2:
+                    ctrl_file = st.file_uploader(f"{ctrl_name}", type=['csv', 'xlsx'], key=f'ctrl_file_{i}')
+                if ctrl_file:
+                    try:
+                        ctrl_df = pd.read_csv(ctrl_file) if ctrl_file.name.endswith('.csv') else pd.read_excel(ctrl_file)
+                        ctrl_df = clean_dataframe_numeric_columns(ctrl_df, exclude_cols=[ctrl_df.columns[0]])
+                        st.session_state.control_data_v7[ctrl_name] = ctrl_df
+                        st.success(f"[OK] {ctrl_name}")
+                    except Exception as e:
+                        st.error(str(e))
+        
+        st.markdown("---")
+        st.markdown("### Step 6: Promotions (Optional)")
+        promo_file = st.file_uploader("Promotion CSV/Excel", type=['csv', 'xlsx'], key='promo_v7')
         if promo_file:
             try:
-                promo_df = pd.read_csv(promo_file)
-                if len(promo_df.columns) > 2:
-                    for col in promo_df.columns[2:]:
-                        promo_df[col] = clean_numeric_column(promo_df[col])
-                
+                promo_df = pd.read_csv(promo_file) if promo_file.name.endswith('.csv') else pd.read_excel(promo_file)
                 st.session_state.promotion_data = promo_df
-                st.success(f"OK Promotion data uploaded! ({len(promo_df)} rows)")
-                
-                with st.expander("Preview Promotion Data"):
-                    st.dataframe(promo_df.head(10), use_container_width=True)
-                    promo_col = promo_df.columns[1]
-                    if promo_df[promo_col].dtype == 'object':
-                        st.info(f"OK Detected **categorical** promotion: {promo_df[promo_col].unique()[:5]}")
-                    else:
-                        st.info(f"OK Detected **numeric** promotion: Range {promo_df[promo_col].min():.2f} - {promo_df[promo_col].max():.2f}")
-                        
+                st.success(f"[OK] Promotions ({len(promo_df)} rows)")
             except Exception as e:
-                st.error(f"Error loading promotion data: {str(e)}")
+                st.error(str(e))
         
-        # Combine data button
         st.markdown("---")
-        if st.button(" Combine All Data", type="primary", use_container_width=True):
-            if st.session_state.kpi_data is None:
-                st.error("X Please upload KPI data first!")
-            elif len(st.session_state.media_data) == 0:
-                st.error("X Please upload at least one media channel!")
+        st.markdown("### Step 7: Combine All")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("KPI", "OK" if st.session_state.kpi_data is not None else "Missing")
+            st.metric("Media", len(st.session_state.media_data_v7))
+        with col2:
+            st.metric("Competition", len(st.session_state.get('competition_data_v7', {})))
+            st.metric("Controls", len(st.session_state.get('control_data_v7', {})))
+        
+        if st.button("Combine All Data", type="primary"):
+            if st.session_state.kpi_data is None or len(st.session_state.media_data_v7) == 0:
+                st.error("[X] Need KPI + media!")
             else:
-                with st.spinner("Combining data..."):
-                    try:
-                        combined = st.session_state.kpi_data.copy()
-                        date_col = combined.columns[0]
-                        combined[date_col] = pd.to_datetime(combined[date_col], errors='coerce', dayfirst=True)
-                        
-                        for channel_name, channel_df in st.session_state.media_data.items():
-                            channel_df = channel_df.copy()
-                            channel_date_col = channel_df.columns[0]
-                            channel_df[channel_date_col] = pd.to_datetime(channel_df[channel_date_col], errors='coerce', dayfirst=True)
-                            
-                            rename_dict = {}
-                            for col in channel_df.columns:
-                                if col.lower() not in ['date']:
-                                    rename_dict[col] = f"{channel_name}_{col}"
-                            channel_df = channel_df.rename(columns=rename_dict)
-                            channel_df = channel_df.rename(columns={channel_date_col: date_col})
-                            combined = combined.merge(channel_df, on=date_col, how='left')
-                        
-                        if st.session_state.promotion_data is not None:
-                            promo_df = st.session_state.promotion_data.copy()
-                            promo_date_col = promo_df.columns[0]
-                            promo_df[promo_date_col] = pd.to_datetime(promo_df[promo_date_col], errors='coerce', dayfirst=True)
-                            promo_df = promo_df.rename(columns={promo_date_col: date_col})
-                            combined = combined.merge(promo_df, on=date_col, how='left')
-                            
-                            promo_col = promo_df.columns[1]
-                            if combined[promo_col].dtype == 'object':
-                                combined[promo_col] = combined[promo_col].fillna('None')
-                            else:
-                                combined[promo_col] = combined[promo_col].fillna(0)
-                        
-                        cost_cols = [col for col in combined.columns if 'cost' in col.lower() or 'spend' in col.lower()]
-                        combined[cost_cols] = combined[cost_cols].fillna(0)
-                        combined = clean_dataframe_numeric_columns(combined, exclude_cols=[date_col])
-                        combined = combined.dropna(subset=[date_col])
-                        
-                        st.session_state.combined_data = combined
-                        st.session_state.data_uploaded = True
-                        
-                        st.success("OK Data combined successfully!")
-                        st.balloons()
-                        
-                    except Exception as e:
-                        st.error(f"Error combining data: {str(e)}")
-                        import traceback
-                        st.code(traceback.format_exc())
+                try:
+                    combined = st.session_state.kpi_data.copy()
+                    date_col = combined.columns[0]
+                    combined[date_col] = pd.to_datetime(combined[date_col], errors='coerce', dayfirst=True)
+                    
+                    for ch_name, ch_df in st.session_state.media_data_v7.items():
+                        ch_df = ch_df.copy()
+                        ch_df[ch_df.columns[0]] = pd.to_datetime(ch_df[ch_df.columns[0]], errors='coerce', dayfirst=True)
+                        rename_dict = {col: f"{ch_name}_{col}" for col in ch_df.columns if col.lower() not in ['date', 'month', 'week']}
+                        ch_df = ch_df.rename(columns=rename_dict).rename(columns={ch_df.columns[0]: date_col})
+                        combined = combined.merge(ch_df, on=date_col, how='left')
+                    
+                    if st.session_state.get('competition_data_v7'):
+                        for comp_name, comp_df in st.session_state.competition_data_v7.items():
+                            comp_df = comp_df.copy()
+                            comp_df[comp_df.columns[0]] = pd.to_datetime(comp_df[comp_df.columns[0]], errors='coerce', dayfirst=True)
+                            rename_dict = {col: f"{comp_name}_{col}" for col in comp_df.columns if col.lower() not in ['date', 'month', 'week']}
+                            comp_df = comp_df.rename(columns=rename_dict).rename(columns={comp_df.columns[0]: date_col})
+                            combined = combined.merge(comp_df, on=date_col, how='left')
+                    
+                    if st.session_state.get('control_data_v7'):
+                        for ctrl_name, ctrl_df in st.session_state.control_data_v7.items():
+                            ctrl_df = ctrl_df.copy()
+                            ctrl_df[ctrl_df.columns[0]] = pd.to_datetime(ctrl_df[ctrl_df.columns[0]], errors='coerce', dayfirst=True)
+                            rename_dict = {col: f"{ctrl_name}_{col}" for col in ctrl_df.columns if col.lower() not in ['date', 'month', 'week']}
+                            ctrl_df = ctrl_df.rename(columns=rename_dict).rename(columns={ctrl_df.columns[0]: date_col})
+                            combined = combined.merge(ctrl_df, on=date_col, how='left')
+                    
+                    if st.session_state.promotion_data is not None:
+                        promo_df = st.session_state.promotion_data.copy()
+                        promo_df[promo_df.columns[0]] = pd.to_datetime(promo_df[promo_df.columns[0]], errors='coerce', dayfirst=True)
+                        promo_df = promo_df.rename(columns={promo_df.columns[0]: date_col})
+                        combined = combined.merge(promo_df, on=date_col, how='left')
+                    
+                    cost_cols = [col for col in combined.columns if any(x in col.lower() for x in ['cost', 'spend', 'spends'])]
+                    combined[cost_cols] = combined[cost_cols].fillna(0)
+                    combined = clean_dataframe_numeric_columns(combined, exclude_cols=[date_col])
+                    combined = combined.dropna(subset=[date_col])
+                    
+                    st.session_state.combined_data = combined
+                    
+                    media_cols = [col for col in combined.columns if any(ch in col for ch in st.session_state.media_data_v7.keys())]
+                    comp_cols = [col for col in combined.columns if any(comp in col for comp in st.session_state.get('competition_data_v7', {}).keys())]
+                    ctrl_cols = [col for col in combined.columns if any(ctrl in col for ctrl in st.session_state.get('control_data_v7', {}).keys())]
+                    
+                    st.session_state.v7_mode = True
+                    st.session_state.v7_time_col = date_col
+                    st.session_state.v7_dependent_var = combined.columns[1]
+                    st.session_state.v7_paid_media_cols = media_cols
+                    
+                    st.session_state.v7_tv_cols = []
+                    if 'tv_channels' in locals():
+                        for tv_ch in tv_channels:
+                            st.session_state.v7_tv_cols.extend([col for col in media_cols if tv_ch in col])
+                    
+                    st.session_state.v7_traditional_cols = []
+                    if 'traditional_channels' in locals():
+                        for trad_ch in traditional_channels:
+                            st.session_state.v7_traditional_cols.extend([col for col in media_cols if trad_ch in col])
+                    
+                    st.session_state.v7_digital_cols = [col for col in media_cols if col not in st.session_state.v7_tv_cols + st.session_state.v7_traditional_cols]
+                    st.session_state.v7_competition_cols = comp_cols
+                    
+                    st.session_state.v7_atl_cols = []
+                    if 'atl_comps' in locals():
+                        for atl_comp in atl_comps:
+                            st.session_state.v7_atl_cols.extend([col for col in comp_cols if atl_comp in col])
+                    
+                    st.session_state.v7_control_cols = ctrl_cols
+                    st.session_state.data_uploaded = True
+                    
+                    st.success("[OK] Combined with v7 config!")
+                    st.balloons()
+                    st.info("Next: Data Overview")
+                    
+                except Exception as e:
+                    st.error(f"[X] Error: {str(e)}")
     
     else:
         # NEW v7: COMBINED DATASET UPLOAD
