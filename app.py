@@ -288,138 +288,8 @@ if tab_selection == "📖 User Guide":
     st.markdown('<p class="sub-header">📖 User Guide & Data Requirements</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    ## Welcome to MMM Platform v7 - Full Edition
-    
-    This comprehensive Marketing Mix Modeling platform supports multiple variable types and advanced analytics.
-    
-    ### 📋 Supported Variable Types
-    """)
-    
-    var_types_df = pd.DataFrame({
-        'Variable Type': [
-            '📍 time_column',
-            '🎯 dependent_var',
-            '💰 paid_media_spends',
-            '🏢 competition_spend_vars',
-            '🎛️ untransformed_vars',
-            '📺 tv_vars',
-            '📻 traditional_vars',
-            '📢 atl_vars'
-        ],
-        'Required': [
-            '✅ MANDATORY',
-            '✅ MANDATORY',
-            '✅ MANDATORY',
-            '⚪ Optional',
-            '⚪ Optional',
-            '⚪ Optional',
-            '⚪ Optional',
-            '⚪ Optional'
-        ],
-        'Description': [
-            'Date/time column (e.g., Month, Date)',
-            'Target KPI - what you want to predict (Revenue, Sales)',
-            'Marketing channel spending (main media variables)',
-            'Competitor marketing spending',
-            'Control variables - no transformation needed (price, inflation)',
-            'TV/Video channels (uses higher adstock 0.3-0.8)',
-            'Traditional media: Radio, Print, Outdoor (adstock 0.1-0.4)',
-            'Above-the-line competitor spends'
-        ]
-    })
-    
-    st.dataframe(var_types_df, use_container_width=True)
-    
-    st.markdown("---")
-    st.markdown("### 📝 Column Naming Conventions (From Data Dictionary)")
-    
-    with st.expander("🎯 **KPI Variables (dependent_var)** - Choose ONE"):
-        st.code("""
-Sales_Volume_Total           - Total number of units sold
-Sales_Revenue_Total          - Total sales revenue in USD
-Sales_Volume_Category1       - Units sold for specific category
-Sales_Revenue_Channel1       - Revenue from specific channel
-        """)
-    
-    with st.expander("💰 **Paid Media Spends (paid_media_spends)** - Select multiple"):
-        st.code("""
-TV_Spends                    - TV advertising spend in USD
-Radio_Spends                 - Radio advertising spend
-Outdoor_Spends               - Outdoor/OOH advertising spend
-Paid_Search_Spends           - Paid search advertising
-Programmatic_Display_Spends  - Programmatic display advertising
-Google_Display_Spend         - Google display advertising
-Direct_Display_Spend         - Direct display advertising
-Meta1_Spends                 - META platform 1 advertising
-Meta2_Spends                 - META platform 2 advertising
-Youtube_Spends               - YouTube advertising
-Programmatic_Video_Spends    - Programmatic video advertising
-Influencer_Marketing_Spends  - Influencer marketing spend
-        """)
-    
-    with st.expander("🏢 **Competition Variables (competition_spend_vars)** - Optional"):
-        st.code("""
-Brand_B_ATL_Spends           - Competitor Brand B ATL spending
-Brand_PH_ATL_Spends          - Competitor Brand PH ATL spending
-Brand_P_ATL_Spends           - Competitor Brand P ATL spending
-        """)
-    
-    with st.expander("🎛️ **Control Variables (untransformed_vars)** - No transformation"):
-        st.code("""
-Inflation_Rate               - Inflation rate (percentage)
-Average_Price_Total          - Average product price
-Market_Share_Brand_M_Total   - Market share percentage
-Brand_PH_Market_Share        - Competitor market share
-Brand_B_Market_Share         - Competitor market share
-Brand_P_Market_Share         - Competitor market share
-TV_GRP                       - TV Gross Rating Points
-        """)
-    
-    st.markdown("---")
-    st.markdown("### 🎯 NEW v7 Features")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("""
-        **Channel-Specific Parameters:**
-        - TV/Video: Adstock 0.3-0.8 (high carryover)
-        - Digital: Adstock 0.0-0.3 (low carryover)
-        - Traditional: Adstock 0.1-0.4 (medium)
-        - Competition: Adstock 0.1-0.8 (variable)
-        
-        **Feature Selection:**
-        - Grid search over θ, α, γ combinations
-        - Pearson correlation with target
-        - Auto-select best parameters
-        """)
-    
-    with col2:
-        st.markdown("""
-        **Extended Diagnostics:**
-        - VIF (multicollinearity detection)
-        - NRMSE (normalized error)
-        - AIC/BIC (model selection)
-        - Durbin-Watson (autocorrelation)
-        - 95% Confidence Intervals
-        - DECOMP.RSSD (spend vs effect)
-        """)
-    
-    st.markdown("---")
-    st.markdown("""
-    ### 💡 Usage Flow
-    
-    1. **📤 Data Upload:** Upload your data files (KPI, media channels, optional: promotions, competition, controls)
-    2. **🔍 Data Overview:** Validate and explore your data
-    3. **🎯 Modeling:** Configure channel types, enable feature selection, train model
-    4. **📈 Results:** View contributions, ROI, response curves, optimization, diagnostics
-    
-    ---
-    
-    **Ready to start?** Go to **📤 Data Upload** →
-    """)
 
-# TAB 1: Data Upload
+# TAB 1: Data Upload (FIXED - NOW SUPPORTS ALL 8 VARIABLE TYPES IN INDIVIDUAL MODE)
 elif tab_selection == "📤 Data Upload":
     st.markdown('<p class="sub-header">Upload Your Marketing Data</p>', unsafe_allow_html=True)
     
@@ -427,98 +297,225 @@ elif tab_selection == "📤 Data Upload":
     <div class="info-box">
     <b>ℹ️ Upload Options:</b>
     <ul>
-    <li><b>Option A:</b> Upload individual files for KPI and each media channel (simpler)</li>
-    <li><b>Option B:</b> Upload one combined dataset with all variables (faster for v7 features)</li>
+    <li><b>Option A:</b> Individual Files - Upload separate files for each variable type (supports all 8 types)</li>
+    <li><b>Option B:</b> Combined Dataset - Upload one file with all variables (faster setup)</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)
     
-    upload_mode = st.radio("Select upload mode:", ["Individual Files (Original)", "Combined Dataset (v7)"], horizontal=True)
+    upload_mode = st.radio("Select upload mode:", ["Individual Files (All 8 Types)", "Combined Dataset"], horizontal=True)
     
-    if upload_mode == "Individual Files (Original)":
-        # ORIGINAL UPLOAD MODE
-        col1, col2 = st.columns(2)
+    if upload_mode == "Individual Files (All 8 Types)":
+        # ENHANCED INDIVIDUAL UPLOAD WITH ALL 8 VARIABLE TYPES
         
-        with col1:
-            st.markdown("#### 📊 KPI Data (Revenue)")
-            st.info("Upload your store/Shopify revenue data. Must include: **Date** and **Revenue** columns")
+        st.markdown("### 📊 Step 1: Upload KPI Data (MANDATORY)")
+        st.info("Upload your target KPI (Revenue, Sales Volume, etc.). Must include: **Date** and **KPI** columns")
+        
+        kpi_file = st.file_uploader(
+            "Choose KPI CSV/Excel file",
+            type=['csv', 'xlsx'],
+            key='kpi_upload_v7',
+            help="CSV or Excel with Date and KPI columns"
+        )
+        
+        if kpi_file:
+            try:
+                kpi_df = pd.read_csv(kpi_file) if kpi_file.name.endswith('.csv') else pd.read_excel(kpi_file)
+                kpi_df = clean_dataframe_numeric_columns(kpi_df, exclude_cols=[kpi_df.columns[0]])
+                st.session_state.kpi_data = kpi_df
+                
+                st.success(f"✅ KPI data uploaded successfully! ({len(kpi_df)} rows)")
+                
+                with st.expander("Preview KPI Data"):
+                    st.dataframe(kpi_df.head(10), use_container_width=True)
+                    st.write(f"**Columns:** {', '.join(kpi_df.columns.tolist())}")
+                    st.write(f"**Date range:** {kpi_df.iloc[:, 0].min()} to {kpi_df.iloc[:, 0].max()}")
+                    
+            except Exception as e:
+                st.error(f"Error loading KPI data: {str(e)}")
+        
+        # STEP 2: MEDIA CHANNELS (MANDATORY)
+        st.markdown("---")
+        st.markdown("### 💰 Step 2: Upload Media Channels (MANDATORY)")
+        st.info("Upload your marketing channel files. Each file should have: **Date** and **Spend/Cost** columns")
+        
+        num_media = st.number_input("Number of media channels", min_value=1, max_value=15, value=3, key='num_media_v7')
+        
+        if 'media_data_v7' not in st.session_state:
+            st.session_state.media_data_v7 = {}
+        
+        for i in range(num_media):
+            st.markdown(f"**Channel {i+1}:**")
+            col1, col2 = st.columns([1, 2])
             
-            kpi_file = st.file_uploader(
-                "Choose KPI CSV file",
-                type=['csv'],
-                key='kpi_upload',
-                help="Upload CSV with Date and Revenue columns"
-            )
+            with col1:
+                channel_name = st.text_input(f"Channel name", value=f"Channel_{i+1}", key=f'ch_name_{i}')
             
-            if kpi_file:
+            with col2:
+                channel_file = st.file_uploader(
+                    f"Upload {channel_name} CSV/Excel",
+                    type=['csv', 'xlsx'],
+                    key=f'ch_file_{i}'
+                )
+            
+            if channel_file:
                 try:
-                    kpi_df = pd.read_csv(kpi_file)
-                    kpi_df = clean_dataframe_numeric_columns(kpi_df, exclude_cols=[kpi_df.columns[0]])
-                    st.session_state.kpi_data = kpi_df
+                    ch_df = pd.read_csv(channel_file) if channel_file.name.endswith('.csv') else pd.read_excel(channel_file)
+                    ch_df = clean_dataframe_numeric_columns(ch_df, exclude_cols=[ch_df.columns[0]])
+                    st.session_state.media_data_v7[channel_name] = ch_df
+                    st.success(f"✅ {channel_name} uploaded ({len(ch_df)} rows)")
                     
-                    st.success(f"✅ KPI data uploaded successfully! ({len(kpi_df)} rows)")
-                    
-                    with st.expander("Preview KPI Data"):
-                        st.dataframe(kpi_df.head(10), use_container_width=True)
-                        st.markdown("**Data Info:**")
-                        st.write(f"- Columns: {', '.join(kpi_df.columns.tolist())}")
-                        st.write(f"- Date range: {kpi_df.iloc[:, 0].min()} to {kpi_df.iloc[:, 0].max()}")
+                    with st.expander(f"Preview {channel_name}"):
+                        st.dataframe(ch_df.head(5), use_container_width=True)
                         
                 except Exception as e:
-                    st.error(f"Error loading KPI data: {str(e)}")
+                    st.error(f"Error loading {channel_name}: {str(e)}")
         
-        with col2:
-            st.markdown("#### 💰 Media Spend Data")
-            st.info("Upload media channel data. Must include: **Date** and **Cost** columns")
+        # STEP 3: CLASSIFY MEDIA CHANNELS (NEW v7)
+        if st.session_state.media_data_v7:
+            st.markdown("---")
+            st.markdown("### 📺 Step 3: Classify Media Channels (Optional but Recommended)")
+            st.info("""
+            Classify your channels for **channel-specific parameter ranges**:
+            - **TV/Video:** High carryover (adstock 0.3-0.8)
+            - **Traditional:** Medium carryover (adstock 0.1-0.4)
+            - **Digital:** Low carryover (adstock 0.0-0.3)
+            """)
             
-            num_channels = st.number_input("Number of media channels", min_value=1, max_value=10, value=2, key='num_channels')
+            media_channel_names = list(st.session_state.media_data_v7.keys())
             
-            for i in range(num_channels):
-                st.markdown(f"**Channel {i+1}:**")
-                channel_name = st.text_input(f"Channel name", value=f"Channel_{i+1}", key=f'channel_name_{i}')
-                channel_file = st.file_uploader(
-                    f"Upload {channel_name} CSV",
-                    type=['csv'],
-                    key=f'channel_file_{i}'
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                tv_channels = st.multiselect(
+                    "📺 TV/Video Channels",
+                    media_channel_names,
+                    help="Examples: TV, YouTube, Video Ads, Connected TV"
                 )
+            
+            with col2:
+                traditional_channels = st.multiselect(
+                    "📻 Traditional Media",
+                    [c for c in media_channel_names if c not in tv_channels],
+                    help="Examples: Radio, Print, Outdoor, OOH"
+                )
+            
+            digital_channels = [c for c in media_channel_names if c not in tv_channels + traditional_channels]
+            
+            if digital_channels:
+                st.success(f"📱 **Digital Channels (auto-classified):** {', '.join(digital_channels)}")
+                st.caption("Digital includes: Search, Display, Social, Programmatic")
+        
+        # STEP 4: COMPETITION VARIABLES (NEW v7)
+        st.markdown("---")
+        st.markdown("### 🏢 Step 4: Upload Competition Variables (Optional)")
+        st.info("Upload competitor marketing spend data. Format: **Date** and **Competitor Spend** columns")
+        
+        num_competition = st.number_input("Number of competition variables", min_value=0, max_value=10, value=0, key='num_comp_v7')
+        
+        if 'competition_data_v7' not in st.session_state:
+            st.session_state.competition_data_v7 = {}
+        
+        if num_competition > 0:
+            for i in range(num_competition):
+                st.markdown(f"**Competition Variable {i+1}:**")
+                col1, col2 = st.columns([1, 2])
                 
-                if channel_file:
+                with col1:
+                    comp_name = st.text_input(f"Variable name", value=f"Competitor_{i+1}", key=f'comp_name_{i}')
+                
+                with col2:
+                    comp_file = st.file_uploader(
+                        f"Upload {comp_name} CSV/Excel",
+                        type=['csv', 'xlsx'],
+                        key=f'comp_file_{i}'
+                    )
+                
+                if comp_file:
                     try:
-                        channel_df = pd.read_csv(channel_file)
-                        channel_df = clean_dataframe_numeric_columns(channel_df, exclude_cols=[channel_df.columns[0]])
-                        st.session_state.media_data[channel_name] = channel_df
-                        st.success(f"✅ {channel_name} uploaded ({len(channel_df)} rows)")
+                        comp_df = pd.read_csv(comp_file) if comp_file.name.endswith('.csv') else pd.read_excel(comp_file)
+                        comp_df = clean_dataframe_numeric_columns(comp_df, exclude_cols=[comp_df.columns[0]])
+                        st.session_state.competition_data_v7[comp_name] = comp_df
+                        st.success(f"✅ {comp_name} uploaded ({len(comp_df)} rows)")
                         
-                        with st.expander(f"Preview {channel_name}"):
-                            st.dataframe(channel_df.head(5), use_container_width=True)
+                        with st.expander(f"Preview {comp_name}"):
+                            st.dataframe(comp_df.head(5), use_container_width=True)
                             
                     except Exception as e:
-                        st.error(f"Error loading {channel_name}: {str(e)}")
+                        st.error(f"Error loading {comp_name}: {str(e)}")
+            
+            # Classify ATL
+            if st.session_state.competition_data_v7:
+                comp_names = list(st.session_state.competition_data_v7.keys())
+                atl_comps = st.multiselect(
+                    "📢 Select ATL (Above-the-Line) Competition Variables",
+                    comp_names,
+                    help="ATL typically includes TV, Radio, Print competitor spends"
+                )
         
-        # Promotion/Discount variable upload
+        # STEP 5: CONTROL VARIABLES (NEW v7)
         st.markdown("---")
-        st.markdown("#### 🎁 Promotion/Discount Data (Optional)")
+        st.markdown("### 🎛️ Step 5: Upload Control Variables (Optional)")
         st.info("""
-        Upload promotion data with **Date** and **Promotion** columns.
-        - **String values** (e.g., 'Yes'/'No', 'Sale'/'Normal') → Converted to dummy variables
-        - **Numeric values** (e.g., 10%, 0.15) → Used as continuous variable
+        Upload control variables - **NO transformation applied**. These are used as-is.
+        
+        Examples: Price, Inflation Rate, Market Share, Economic Indicators, Weather, Holidays
+        """)
+        
+        num_controls = st.number_input("Number of control variables", min_value=0, max_value=10, value=0, key='num_ctrl_v7')
+        
+        if 'control_data_v7' not in st.session_state:
+            st.session_state.control_data_v7 = {}
+        
+        if num_controls > 0:
+            for i in range(num_controls):
+                st.markdown(f"**Control Variable {i+1}:**")
+                col1, col2 = st.columns([1, 2])
+                
+                with col1:
+                    ctrl_name = st.text_input(f"Variable name", value=f"Control_{i+1}", key=f'ctrl_name_{i}')
+                
+                with col2:
+                    ctrl_file = st.file_uploader(
+                        f"Upload {ctrl_name} CSV/Excel",
+                        type=['csv', 'xlsx'],
+                        key=f'ctrl_file_{i}'
+                    )
+                
+                if ctrl_file:
+                    try:
+                        ctrl_df = pd.read_csv(ctrl_file) if ctrl_file.name.endswith('.csv') else pd.read_excel(ctrl_file)
+                        ctrl_df = clean_dataframe_numeric_columns(ctrl_df, exclude_cols=[ctrl_df.columns[0]])
+                        st.session_state.control_data_v7[ctrl_name] = ctrl_df
+                        st.success(f"✅ {ctrl_name} uploaded ({len(ctrl_df)} rows)")
+                        
+                        with st.expander(f"Preview {ctrl_name}"):
+                            st.dataframe(ctrl_df.head(5), use_container_width=True)
+                            
+                    except Exception as e:
+                        st.error(f"Error loading {ctrl_name}: {str(e)}")
+        
+        # STEP 6: PROMOTION DATA (OPTIONAL)
+        st.markdown("---")
+        st.markdown("### 🎁 Step 6: Upload Promotion Data (Optional)")
+        st.info("""
+        Upload promotion/discount data. Can be:
+        - **Categorical:** Yes/No, Sale/Normal → Converted to dummy variables
+        - **Numeric:** 10%, 0.15, discount amounts → Used as continuous variable
         """)
         
         promo_file = st.file_uploader(
-            "Upload Promotion CSV (optional)",
-            type=['csv'],
-            key='promo_upload',
-            help="CSV with Date and Promotion columns"
+            "Upload Promotion CSV/Excel (optional)",
+            type=['csv', 'xlsx'],
+            key='promo_upload_v7',
+            help="Date + Promotion columns"
         )
         
         if promo_file:
             try:
-                promo_df = pd.read_csv(promo_file)
-                if len(promo_df.columns) > 2:
-                    for col in promo_df.columns[2:]:
-                        promo_df[col] = clean_numeric_column(promo_df[col])
-                
+                promo_df = pd.read_csv(promo_file) if promo_file.name.endswith('.csv') else pd.read_excel(promo_file)
                 st.session_state.promotion_data = promo_df
+                
                 st.success(f"✅ Promotion data uploaded! ({len(promo_df)} rows)")
                 
                 with st.expander("Preview Promotion Data"):
@@ -528,37 +525,80 @@ elif tab_selection == "📤 Data Upload":
                         st.info(f"✓ Detected **categorical** promotion: {promo_df[promo_col].unique()[:5]}")
                     else:
                         st.info(f"✓ Detected **numeric** promotion: Range {promo_df[promo_col].min():.2f} - {promo_df[promo_col].max():.2f}")
-                        
             except Exception as e:
                 st.error(f"Error loading promotion data: {str(e)}")
         
-        # Combine data button
+        # STEP 7: COMBINE ALL DATA
         st.markdown("---")
-        if st.button("🔗 Combine All Data", type="primary", use_container_width=True):
+        st.markdown("### 🔗 Step 7: Combine All Data")
+        
+        # Show summary
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("✅ KPI Data", "Uploaded" if st.session_state.kpi_data is not None else "Missing")
+            st.metric("💰 Media Channels", len(st.session_state.media_data_v7))
+            st.metric("📺 TV Channels", len(tv_channels) if 'tv_channels' in locals() else 0)
+        
+        with col2:
+            st.metric("📻 Traditional", len(traditional_channels) if 'traditional_channels' in locals() else 0)
+            st.metric("📱 Digital", len(digital_channels) if 'digital_channels' in locals() else 0)
+            st.metric("🏢 Competition", len(st.session_state.get('competition_data_v7', {})))
+        
+        with col3:
+            st.metric("🎛️ Controls", len(st.session_state.get('control_data_v7', {})))
+            st.metric("🎁 Promotion", "Uploaded" if st.session_state.promotion_data is not None else "Not uploaded")
+            st.metric("📊 Total Variables", 1 + len(st.session_state.media_data_v7) + len(st.session_state.get('competition_data_v7', {})) + len(st.session_state.get('control_data_v7', {})))
+        
+        if st.button("🔗 Combine All Data & Create Model Configuration", type="primary", use_container_width=True):
             if st.session_state.kpi_data is None:
                 st.error("❌ Please upload KPI data first!")
-            elif len(st.session_state.media_data) == 0:
+            elif len(st.session_state.media_data_v7) == 0:
                 st.error("❌ Please upload at least one media channel!")
             else:
-                with st.spinner("Combining data..."):
+                with st.spinner("Combining all data and setting up v7 configuration..."):
                     try:
+                        # Start with KPI
                         combined = st.session_state.kpi_data.copy()
                         date_col = combined.columns[0]
                         combined[date_col] = pd.to_datetime(combined[date_col], errors='coerce', dayfirst=True)
                         
-                        for channel_name, channel_df in st.session_state.media_data.items():
-                            channel_df = channel_df.copy()
-                            channel_date_col = channel_df.columns[0]
-                            channel_df[channel_date_col] = pd.to_datetime(channel_df[channel_date_col], errors='coerce', dayfirst=True)
+                        # Merge media channels
+                        for ch_name, ch_df in st.session_state.media_data_v7.items():
+                            ch_df = ch_df.copy()
+                            ch_date_col = ch_df.columns[0]
+                            ch_df[ch_date_col] = pd.to_datetime(ch_df[ch_date_col], errors='coerce', dayfirst=True)
                             
-                            rename_dict = {}
-                            for col in channel_df.columns:
-                                if col.lower() not in ['date']:
-                                    rename_dict[col] = f"{channel_name}_{col}"
-                            channel_df = channel_df.rename(columns=rename_dict)
-                            channel_df = channel_df.rename(columns={channel_date_col: date_col})
-                            combined = combined.merge(channel_df, on=date_col, how='left')
+                            rename_dict = {col: f"{ch_name}_{col}" for col in ch_df.columns if col.lower() not in ['date', 'month', 'week']}
+                            ch_df = ch_df.rename(columns=rename_dict)
+                            ch_df = ch_df.rename(columns={ch_date_col: date_col})
+                            combined = combined.merge(ch_df, on=date_col, how='left')
                         
+                        # Merge competition
+                        if st.session_state.get('competition_data_v7'):
+                            for comp_name, comp_df in st.session_state.competition_data_v7.items():
+                                comp_df = comp_df.copy()
+                                comp_date_col = comp_df.columns[0]
+                                comp_df[comp_date_col] = pd.to_datetime(comp_df[comp_date_col], errors='coerce', dayfirst=True)
+                                
+                                rename_dict = {col: f"{comp_name}_{col}" for col in comp_df.columns if col.lower() not in ['date', 'month', 'week']}
+                                comp_df = comp_df.rename(columns=rename_dict)
+                                comp_df = comp_df.rename(columns={comp_date_col: date_col})
+                                combined = combined.merge(comp_df, on=date_col, how='left')
+                        
+                        # Merge controls
+                        if st.session_state.get('control_data_v7'):
+                            for ctrl_name, ctrl_df in st.session_state.control_data_v7.items():
+                                ctrl_df = ctrl_df.copy()
+                                ctrl_date_col = ctrl_df.columns[0]
+                                ctrl_df[ctrl_date_col] = pd.to_datetime(ctrl_df[ctrl_date_col], errors='coerce', dayfirst=True)
+                                
+                                rename_dict = {col: f"{ctrl_name}_{col}" for col in ctrl_df.columns if col.lower() not in ['date', 'month', 'week']}
+                                ctrl_df = ctrl_df.rename(columns=rename_dict)
+                                ctrl_df = ctrl_df.rename(columns={ctrl_date_col: date_col})
+                                combined = combined.merge(ctrl_df, on=date_col, how='left')
+                        
+                        # Merge promotion
                         if st.session_state.promotion_data is not None:
                             promo_df = st.session_state.promotion_data.copy()
                             promo_date_col = promo_df.columns[0]
@@ -572,24 +612,109 @@ elif tab_selection == "📤 Data Upload":
                             else:
                                 combined[promo_col] = combined[promo_col].fillna(0)
                         
-                        cost_cols = [col for col in combined.columns if 'cost' in col.lower() or 'spend' in col.lower()]
+                        # Fill NaN for spend/cost columns
+                        cost_cols = [col for col in combined.columns if any(x in col.lower() for x in ['cost', 'spend', 'spends'])]
                         combined[cost_cols] = combined[cost_cols].fillna(0)
+                        
+                        # Clean and finalize
                         combined = clean_dataframe_numeric_columns(combined, exclude_cols=[date_col])
                         combined = combined.dropna(subset=[date_col])
                         
+                        # Store combined data
                         st.session_state.combined_data = combined
+                        
+                        # Build column name lists from combined data
+                        media_col_names = []
+                        for ch_name in st.session_state.media_data_v7.keys():
+                            matching_cols = [col for col in combined.columns if col.startswith(f"{ch_name}_")]
+                            media_col_names.extend(matching_cols)
+                        
+                        competition_col_names = []
+                        if st.session_state.get('competition_data_v7'):
+                            for comp_name in st.session_state.competition_data_v7.keys():
+                                matching_cols = [col for col in combined.columns if col.startswith(f"{comp_name}_")]
+                                competition_col_names.extend(matching_cols)
+                        
+                        control_col_names = []
+                        if st.session_state.get('control_data_v7'):
+                            for ctrl_name in st.session_state.control_data_v7.keys():
+                                matching_cols = [col for col in combined.columns if col.startswith(f"{ctrl_name}_")]
+                                control_col_names.extend(matching_cols)
+                        
+                        # Store v7 configuration
+                        st.session_state.v7_mode = True
+                        st.session_state.v7_time_col = date_col
+                        st.session_state.v7_dependent_var = combined.columns[1]  # Second column is KPI
+                        st.session_state.v7_paid_media_cols = media_col_names
+                        
+                        # Classify channels
+                        st.session_state.v7_tv_cols = []
+                        if 'tv_channels' in locals():
+                            for tv_ch in tv_channels:
+                                st.session_state.v7_tv_cols.extend([col for col in media_col_names if col.startswith(f"{tv_ch}_")])
+                        
+                        st.session_state.v7_traditional_cols = []
+                        if 'traditional_channels' in locals():
+                            for trad_ch in traditional_channels:
+                                st.session_state.v7_traditional_cols.extend([col for col in media_col_names if col.startswith(f"{trad_ch}_")])
+                        
+                        st.session_state.v7_digital_cols = [col for col in media_col_names 
+                                                            if col not in st.session_state.v7_tv_cols + st.session_state.v7_traditional_cols]
+                        
+                        st.session_state.v7_competition_cols = competition_col_names
+                        
+                        st.session_state.v7_atl_cols = []
+                        if 'atl_comps' in locals() and st.session_state.get('competition_data_v7'):
+                            for atl_comp in atl_comps:
+                                st.session_state.v7_atl_cols.extend([col for col in competition_col_names if col.startswith(f"{atl_comp}_")])
+                        
+                        st.session_state.v7_control_cols = control_col_names
                         st.session_state.data_uploaded = True
                         
-                        st.success("✅ Data combined successfully!")
+                        st.success("✅ Data combined successfully with v7 configuration!")
                         st.balloons()
                         
+                        # Show final configuration
+                        st.markdown("---")
+                        st.markdown("### 📋 Final v7 Configuration")
+                        
+                        config_summary = pd.DataFrame({
+                            'Variable Type': ['Time', 'KPI', 'Total Media', 'Digital', 'TV/Video', 'Traditional', 'Competition', 'ATL', 'Controls'],
+                            'Count': [
+                                1,
+                                1,
+                                len(media_col_names),
+                                len(st.session_state.v7_digital_cols),
+                                len(st.session_state.v7_tv_cols),
+                                len(st.session_state.v7_traditional_cols),
+                                len(competition_col_names),
+                                len(st.session_state.v7_atl_cols),
+                                len(control_col_names)
+                            ],
+                            'Examples': [
+                                date_col,
+                                st.session_state.v7_dependent_var,
+                                ', '.join(media_col_names[:3]) + ('...' if len(media_col_names) > 3 else ''),
+                                ', '.join(st.session_state.v7_digital_cols[:2]) + ('...' if len(st.session_state.v7_digital_cols) > 2 else ''),
+                                ', '.join(st.session_state.v7_tv_cols[:2]) + ('...' if len(st.session_state.v7_tv_cols) > 2 else ''),
+                                ', '.join(st.session_state.v7_traditional_cols[:2]) + ('...' if len(st.session_state.v7_traditional_cols) > 2 else ''),
+                                ', '.join(competition_col_names[:2]) + ('...' if len(competition_col_names) > 2 else ''),
+                                ', '.join(st.session_state.v7_atl_cols[:2]) + ('...' if len(st.session_state.v7_atl_cols) > 2 else ''),
+                                ', '.join(control_col_names[:2]) + ('...' if len(control_col_names) > 2 else '')
+                            ]
+                        })
+                        
+                        st.dataframe(config_summary, use_container_width=True)
+                        
+                        st.info("✅ **Next Step:** Go to 'Data Overview' to validate your data, then 'Modeling' to train!")
+                        
                     except Exception as e:
-                        st.error(f"Error combining data: {str(e)}")
+                        st.error(f"❌ Error combining data: {str(e)}")
                         import traceback
                         st.code(traceback.format_exc())
     
     else:
-        # NEW v7: COMBINED DATASET UPLOAD
+        # COMBINED DATASET UPLOAD MODE (existing code from original)
         st.markdown("#### 📊 Upload Complete Dataset")
         st.info("Upload one file containing all variables (KPI, media, competition, controls, etc.)")
         
@@ -609,7 +734,6 @@ elif tab_selection == "📤 Data Upload":
                 
                 st.markdown("### ⚙️ Configure Variable Types")
                 
-                # Store variable classifications in session state for modeling
                 if 'v7_mode' not in st.session_state:
                     st.session_state.v7_mode = True
                 
@@ -638,6 +762,50 @@ elif tab_selection == "📤 Data Upload":
                 with col4:
                     control_cols = st.multiselect(
                         "🎛️ Control Variables - Untransformed (Optional)",
+                        [c for c in df.columns if c not in [time_col, dependent_var] + paid_media_cols + competition_cols]
+                    )
+                    traditional_cols = st.multiselect("📻 Traditional Media (Optional)", [c for c in paid_media_cols if c not in tv_cols])
+                
+                atl_cols = st.multiselect("📢 ATL Competition (Optional)", competition_cols) if competition_cols else []
+                digital_cols = [c for c in paid_media_cols if c not in tv_cols + traditional_cols]
+                
+                # Config summary
+                st.markdown("---")
+                st.markdown("### 📋 Configuration Summary")
+                
+                config_summary = pd.DataFrame({
+                    'Type': ['Time', 'KPI', 'Media', 'Digital', 'TV', 'Traditional', 'Competition', 'ATL', 'Controls'],
+                    'Count': [1, 1, len(paid_media_cols), len(digital_cols), len(tv_cols), len(traditional_cols), 
+                             len(competition_cols), len(atl_cols), len(control_cols)]
+                })
+                st.dataframe(config_summary)
+                
+                if st.button("✅ Confirm Configuration & Process", type="primary", use_container_width=True):
+                    with st.spinner("Processing..."):
+                        df = clean_dataframe_numeric_columns(df, exclude_cols=[time_col])
+                        df[time_col] = pd.to_datetime(df[time_col], errors='coerce', dayfirst=True)
+                        df = df.dropna(subset=[time_col]).sort_values(time_col).reset_index(drop=True)
+                        
+                        # Store all configurations
+                        st.session_state.combined_data = df
+                        st.session_state.v7_time_col = time_col
+                        st.session_state.v7_dependent_var = dependent_var
+                        st.session_state.v7_paid_media_cols = paid_media_cols
+                        st.session_state.v7_digital_cols = digital_cols
+                        st.session_state.v7_tv_cols = tv_cols
+                        st.session_state.v7_traditional_cols = traditional_cols
+                        st.session_state.v7_competition_cols = competition_cols
+                        st.session_state.v7_atl_cols = atl_cols
+                        st.session_state.v7_control_cols = control_cols
+                        st.session_state.data_uploaded = True
+                        st.session_state.v7_mode = True
+                        
+                        st.success("✅ Configuration saved! Go to Overview →")
+                        st.balloons()
+            
+            except Exception as e:
+                st.error(f"Error: {e}")
+
                         [c for c in df.columns if c not in [time_col, dependent_var] + paid_media_cols + competition_cols]
                     )
                     traditional_cols = st.multiselect("📻 Traditional Media (Optional)", [c for c in paid_media_cols if c not in tv_cols])
