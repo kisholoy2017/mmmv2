@@ -500,8 +500,8 @@ elif tab_selection == "📤 Data Upload":
         st.markdown("### 🎁 Step 6: Upload Promotion Data (Optional)")
         st.info("""
         Upload promotion/discount data. Can be:
-        - **Categorical:** Yes/No, Sale/Normal → Converted to dummy variables
-        - **Numeric:** 10%, 0.15, discount amounts → Used as continuous variable
+        - **Categorical:** Yes/No, Sale/Normal -> Converted to dummy variables
+        - **Numeric:** 10%, 0.15, discount amounts -> Used as continuous variable
         """)
         
         promo_file = st.file_uploader(
@@ -800,7 +800,7 @@ elif tab_selection == "📤 Data Upload":
                         st.session_state.data_uploaded = True
                         st.session_state.v7_mode = True
                         
-                        st.success("✅ Configuration saved! Go to Overview →")
+                        st.success("✅ Configuration saved! Go to Overview ->")
                         st.balloons()
             
             except Exception as e:
@@ -844,7 +844,7 @@ elif tab_selection == "📤 Data Upload":
                         st.session_state.data_uploaded = True
                         st.session_state.v7_mode = True
                         
-                        st.success("✅ Configuration saved! Go to Overview →")
+                        st.success("✅ Configuration saved! Go to Overview ->")
                         st.balloons()
             
             except Exception as e:
@@ -1411,7 +1411,7 @@ elif tab_selection == "🎯 Marketing Mix Modeling":
                 plt.tight_layout()
                 st.pyplot(fig)
                 
-                st.info("✅ Model training complete! Go to 'Results & Insights' →")
+                st.info("✅ Model training complete! Go to 'Results & Insights' ->")
                 
             except Exception as e:
                 st.error(f"❌ Error: {str(e)}")
@@ -1717,18 +1717,16 @@ elif tab_selection == "📈 Results & Insights":
         insight_col1, insight_col2 = st.columns(2)
         
         with insight_col1:
-            st.info(f"""
-            **Best Overall ROI:**
-            - **{best_roi_channel['Channel']}** has ROI of **{best_roi_channel['ROI (iROAS)']:.2f}**
-            - Every $1 spent returns ${best_roi_channel['ROI (iROAS)']:.2f}
-            """)
+            roi_text = f"**Best Overall ROI:**\n\n"
+            roi_text += f"{best_roi_channel['Channel']} has ROI of {best_roi_channel['ROI (iROAS)']:.2f}\n\n"
+            roi_text += f"Every $1 spent returns ${best_roi_channel['ROI (iROAS)']:.2f}"
+            st.info(roi_text)
         
         with insight_col2:
-            st.info(f"""
-            **Best Marginal Efficiency:**
-            - **{best_marginal_channel['Channel']}** has marginal ROI of **{best_marginal_channel['Marginal ROI']:.2f}**
-            - Most room for additional investment
-            """)
+            marg_text = f"**Best Marginal Efficiency:**\n\n"
+            marg_text += f"{best_marginal_channel['Channel']} has marginal ROI of {best_marginal_channel['Marginal ROI']:.2f}\n\n"
+            marg_text += "Most room for additional investment"
+            st.info(marg_text)
     
     # TAB 3: RESPONSE CURVES
     with result_tabs[2]:
