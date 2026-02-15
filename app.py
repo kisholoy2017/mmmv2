@@ -169,14 +169,29 @@ def adstock_transformation(x, alpha=0.5):
     return y
 
 def hill_transformation(x, kappa, slope=1.0):
-    """Apply Hill saturation transformation"""
+    """Apply Hill saturation transformation with safety checks"""
     x = np.maximum(np.asarray(x, dtype=float), 0.0)
     k = max(float(kappa), 1e-9)
+    
     if slope == 1.0:
-        return x / (x + k)
-    xs = np.power(x, slope)
-    ks = np.power(k, slope)
-    return xs / (xs + ks)
+        # Simple case - no power operation
+        result = x / (x + k + 1e-10)
+    else:
+        # Power case - add safety checks
+        slope = max(min(float(slope), 10.0), 0.1)  # Limit slope to prevent overflow
+        
+        # Clip x to prevent overflow in power operation
+        x_clipped = np.clip(x, 0, 1e6)
+        
+        xs = np.power(x_clipped, slope)
+        ks = np.power(k, slope)
+        
+        # Add small epsilon to denominator
+        result = xs / (xs + ks + 1e-10)
+    
+    # Final safety check
+    result = np.nan_to_num(result, nan=0.0, posinf=1.0, neginf=0.0)
+    return result
 
 def hill_derivative(x, kappa, slope=1.0):
     """Calculate derivative of Hill function for marginal ROAS"""
@@ -1118,12 +1133,19 @@ elif tab_selection == " Marketing Mix Modeling":
                             slope=params['alpha']
                         )
                         
-                        # Standardize
+                        # Standardize with safety check
                         mu = daily_df[f'{media_col}_saturated'].mean()
-                        sd = daily_df[f'{media_col}_saturated'].std() or 1.0
+                        sd = daily_df[f'{media_col}_saturated'].std()
+                        
+                        # Ensure sd is not zero or too small
+                        if sd < 1e-10 or not np.isfinite(sd):
+                            sd = 1.0
                         
                         feat_name = f'{media_col}_feat'
                         daily_df[feat_name] = (daily_df[f'{media_col}_saturated'] - mu) / sd
+                        
+                        # Safety check for the feature
+                        daily_df[feat_name] = daily_df[feat_name].replace([np.inf, -np.inf], 0).fillna(0)
                         
                         feat_cols.append(feat_name)
                         
@@ -1154,10 +1176,17 @@ elif tab_selection == " Marketing Mix Modeling":
                         )
                         
                         mu = daily_df[f'{media_col}_saturated'].mean()
-                        sd = daily_df[f'{media_col}_saturated'].std() or 1.0
+                        sd = daily_df[f'{media_col}_saturated'].std()
+                        
+                        # Ensure sd is not zero or too small
+                        if sd < 1e-10 or not np.isfinite(sd):
+                            sd = 1.0
                         
                         feat_name = f'{media_col}_feat'
                         daily_df[feat_name] = (daily_df[f'{media_col}_saturated'] - mu) / sd
+                        
+                        # Safety check for the feature
+                        daily_df[feat_name] = daily_df[feat_name].replace([np.inf, -np.inf], 0).fillna(0)
                         
                         feat_cols.append(feat_name)
                         
@@ -1207,6 +1236,27 @@ elif tab_selection == " Marketing Mix Modeling":
                 
                 y_train = train_df[target_col].values.astype(float)
                 y_test = test_df[target_col].values.astype(float)
+                
+                # Validate and clean data before model training
+                # Check for NaN and Inf values
+                nan_count = X_train.isna().sum().sum()
+                inf_count = np.isinf(X_train.values).sum()
+                
+                if nan_count > 0 or inf_count > 0:
+                    st.warning(f"Found {nan_count} NaN and {inf_count} Inf values in features. Cleaning...")
+                    
+                    # Replace NaN with 0
+                    X_train = X_train.fillna(0)
+                    X_test = X_test.fillna(0)
+                    
+                    # Replace Inf with large finite values
+                    X_train = X_train.replace([np.inf, -np.inf], [1e10, -1e10])
+                    X_test = X_test.replace([np.inf, -np.inf], [1e10, -1e10])
+                
+                # Final check - ensure all values are finite
+                if not np.all(np.isfinite(X_train.values)):
+                    st.error("Data still contains non-finite values after cleaning. Please check your data.")
+                    st.stop()
                 
                 # Train model
                 model = sm.OLS(y_train, X_train).fit()
