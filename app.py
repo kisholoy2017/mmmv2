@@ -199,7 +199,7 @@ def calculate_decomp_rssd(test_df, contributions, media_cols):
     return rssd, spend_share, effect_share
 
 # Main app
-st.markdown('<p class="main-header">📊 Marketing Mix Modeling Platform + DECOMP.RSSD + VIF</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">📊 Marketing Mix Modeling Platform + DECOMP.RSSD + VIF + CI</p>', unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
@@ -217,6 +217,7 @@ with st.sidebar:
     **Enhanced Features:**
     - DECOMP.RSSD metric
     - VIF analysis
+    - **Confidence Intervals (95% CI)**
     - Budget optimization (scipy)
     - Promotion variables
     - Complete diagnostics
@@ -1006,6 +1007,92 @@ elif tab_selection == "📈 Results & Insights":
             plt.tight_layout()
             st.pyplot(fig)
             
+            # Media Channel Statistical Significance
+            st.markdown("---")
+            st.markdown("### 📊 Media Channel Coefficient Confidence Intervals")
+            
+            st.info("""
+            **Statistical Significance Check:** Are the effects real or just noise?
+            - **CI excludes 0** → ✅ Statistically significant effect
+            - **CI includes 0** → ⚠️ Effect not statistically significant
+            """)
+            
+            # Get confidence intervals for media features
+            conf_intervals = model.conf_int(alpha=0.05)  # 95% CI
+            
+            media_ci_data = []
+            for feat in feat_cols:
+                channel_name = meta[feat]['spend_col']
+                if feat in model.params.index:
+                    coef = model.params[feat]
+                    ci_lower = conf_intervals.loc[feat, 0]
+                    ci_upper = conf_intervals.loc[feat, 1]
+                    p_value = model.pvalues[feat]
+                    
+                    # Check if significant
+                    is_significant = (ci_lower > 0 or ci_upper < 0)
+                    
+                    media_ci_data.append({
+                        'Channel': channel_name.replace('_Cost', '').replace('_cost', ''),
+                        'Coefficient': coef,
+                        'CI Lower (2.5%)': ci_lower,
+                        'CI Upper (97.5%)': ci_upper,
+                        'P-Value': p_value,
+                        'Significant': '✅ Yes' if is_significant else '⚠️ No'
+                    })
+            
+            media_ci_df = pd.DataFrame(media_ci_data)
+            
+            st.dataframe(
+                media_ci_df.style.format({
+                    'Coefficient': '{:.4f}',
+                    'CI Lower (2.5%)': '{:.4f}',
+                    'CI Upper (97.5%)': '{:.4f}',
+                    'P-Value': '{:.4f}'
+                }).apply(lambda x: ['background-color: #d4edda' if v == '✅ Yes' else 'background-color: #fff3cd' 
+                                     for v in x], subset=['Significant']),
+                use_container_width=True
+            )
+            
+            # Coefficient plot for media channels
+            if len(media_ci_df) > 0:
+                fig, ax = plt.subplots(figsize=(10, max(5, len(media_ci_df) * 0.5)))
+                
+                y_pos = np.arange(len(media_ci_df))
+                
+                # Plot coefficient points
+                ax.scatter(media_ci_df['Coefficient'], y_pos, s=120, c='steelblue', zorder=3, edgecolors='black', linewidths=1.5)
+                
+                # Plot confidence interval error bars
+                for i, row in media_ci_df.iterrows():
+                    lower = row['CI Lower (2.5%)']
+                    upper = row['CI Upper (97.5%)']
+                    coef = row['Coefficient']
+                    
+                    # Color: green if significant, orange if not
+                    color = 'green' if row['Significant'] == '✅ Yes' else 'orange'
+                    ax.plot([lower, upper], [i, i], color=color, linewidth=3, zorder=2, alpha=0.7)
+                
+                # Add vertical line at 0
+                ax.axvline(x=0, color='red', linestyle='--', linewidth=2, alpha=0.6, label='Zero Effect')
+                
+                ax.set_yticks(y_pos)
+                ax.set_yticklabels(media_ci_df['Channel'])
+                ax.set_xlabel('Coefficient Value (Standardized Effect Size)', fontsize=11, fontweight='bold')
+                ax.set_title('Media Channel Effects with 95% Confidence Intervals', fontsize=13, fontweight='bold')
+                ax.grid(axis='x', alpha=0.3)
+                ax.legend(loc='best')
+                
+                # Add annotation
+                ax.text(0.02, 0.98, '🟢 Significant | 🟠 Not Significant', 
+                       transform=ax.transAxes, fontsize=10, verticalalignment='top',
+                       bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+            
+            st.caption("💡 Channels with CIs that don't include zero have statistically significant effects on revenue")
+            
             # Insights
             st.markdown("---")
             st.markdown("### 💡 Key Insights")
@@ -1367,9 +1454,12 @@ elif tab_selection == "📈 Results & Insights":
             except Exception as e:
                 st.error(f"Error calculating VIF: {e}")
             
-            # Model Coefficients
+            # Model Coefficients with Confidence Intervals
             st.markdown("---")
-            st.markdown("#### 📊 Model Coefficients")
+            st.markdown("#### 📊 Model Coefficients with 95% Confidence Intervals")
+            
+            # Get confidence intervals
+            conf_intervals = model.conf_int(alpha=0.05)  # 95% CI
             
             coef_data = []
             for param in model.params.index:
@@ -1377,6 +1467,9 @@ elif tab_selection == "📈 Results & Insights":
                     'Variable': param,
                     'Coefficient': model.params[param],
                     'Std Error': model.bse[param],
+                    'CI Lower (2.5%)': conf_intervals.loc[param, 0],
+                    'CI Upper (97.5%)': conf_intervals.loc[param, 1],
+                    'CI Width': conf_intervals.loc[param, 1] - conf_intervals.loc[param, 0],
                     'T-Statistic': model.tvalues[param],
                     'P-Value': model.pvalues[param],
                     'Significant': '***' if model.pvalues[param] < 0.001 else ('**' if model.pvalues[param] < 0.01 else ('*' if model.pvalues[param] < 0.05 else ''))
@@ -1388,6 +1481,9 @@ elif tab_selection == "📈 Results & Insights":
                 coef_df.style.format({
                     'Coefficient': '{:.4f}',
                     'Std Error': '{:.4f}',
+                    'CI Lower (2.5%)': '{:.4f}',
+                    'CI Upper (97.5%)': '{:.4f}',
+                    'CI Width': '{:.4f}',
                     'T-Statistic': '{:.4f}',
                     'P-Value': '{:.4f}'
                 }).background_gradient(subset=['Coefficient'], cmap='coolwarm', vmin=-1, vmax=1),
@@ -1395,6 +1491,76 @@ elif tab_selection == "📈 Results & Insights":
             )
             
             st.caption("Significance: *** p<0.001, ** p<0.01, * p<0.05")
+            
+            # Download button for coefficients table
+            csv_coef = coef_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Coefficients with CIs",
+                data=csv_coef,
+                file_name=f"model_coefficients_CI_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key="download_coef_ci"
+            )
+            
+            # Confidence Interval Visualization
+            st.markdown("---")
+            st.markdown("#### 📊 Coefficient Estimates with 95% Confidence Intervals")
+            
+            # Filter to show only media channels and key variables (exclude seasonality dummies for clarity)
+            key_vars = [v for v in coef_df['Variable'] if not any(x in v for x in ['dow_', 'month_']) or v == 'const']
+            plot_df = coef_df[coef_df['Variable'].isin(key_vars)].copy()
+            
+            if len(plot_df) > 0:
+                fig, ax = plt.subplots(figsize=(10, max(6, len(plot_df) * 0.4)))
+                
+                # Sort by coefficient value
+                plot_df = plot_df.sort_values('Coefficient')
+                
+                y_pos = np.arange(len(plot_df))
+                
+                # Plot coefficient points
+                ax.scatter(plot_df['Coefficient'], y_pos, s=100, c='steelblue', zorder=3, label='Coefficient')
+                
+                # Plot confidence interval error bars
+                ci_lower = plot_df['CI Lower (2.5%)'].values
+                ci_upper = plot_df['CI Upper (97.5%)'].values
+                
+                for i, (lower, upper, coef) in enumerate(zip(ci_lower, ci_upper, plot_df['Coefficient'].values)):
+                    # Color code: green if CI doesn't include 0, orange if it does
+                    color = 'green' if (lower > 0 or upper < 0) else 'orange'
+                    ax.plot([lower, upper], [i, i], color=color, linewidth=2, zorder=2)
+                
+                # Add vertical line at 0
+                ax.axvline(x=0, color='red', linestyle='--', linewidth=1, alpha=0.5, label='Zero')
+                
+                ax.set_yticks(y_pos)
+                ax.set_yticklabels(plot_df['Variable'])
+                ax.set_xlabel('Coefficient Value', fontsize=11, fontweight='bold')
+                ax.set_title('Model Coefficients with 95% Confidence Intervals', fontsize=13, fontweight='bold')
+                ax.grid(axis='x', alpha=0.3)
+                ax.legend()
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                st.caption("🟢 Green bars: Statistically significant (CI doesn't include 0) | 🟠 Orange bars: Not significant (CI includes 0)")
+            
+            # Statistical note
+            with st.expander("ℹ️ Understanding Confidence Intervals"):
+                st.markdown("""
+                **What are Confidence Intervals?**
+                - A 95% CI means: "If we repeated this analysis 100 times, the true coefficient would fall within this range in 95 of those runs"
+                
+                **Interpretation:**
+                - **Narrow CI** = More precise estimate (good!)
+                - **Wide CI** = Less precise estimate (need more data or less noise)
+                - **CI excludes 0** = Statistically significant effect
+                - **CI includes 0** = Cannot confidently say effect is non-zero
+                
+                **Example:**
+                - Coefficient: 2.5, CI: [1.2, 3.8] → Significant positive effect
+                - Coefficient: 0.8, CI: [-0.5, 2.1] → Not significant (could be zero)
+                """)
             
             # Model Statistics
             st.markdown("---")
@@ -1456,6 +1622,6 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 20px;'>
     <p><b>Marketing Mix Modeling Platform</b></p>
-    <p>Enhanced with DECOMP.RSSD & VIF Analysis | Built with Streamlit</p>
+    <p>Enhanced with DECOMP.RSSD, VIF Analysis & 95% Confidence Intervals | Built with Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
